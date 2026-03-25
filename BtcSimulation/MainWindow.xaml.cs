@@ -74,7 +74,9 @@ namespace BtcSimulation
         var prices = await FetchBtcEurUsdAsync(_cts.Token);
         BtcPriceText.Text = FormatPrice(prices.Eur, "fr-FR", "€");
         BtcPriceUsdText.Text = FormatPrice(prices.Usd, "en-US", "$");
-        LastUpdatedText.Text = $"Dernière mise à jour : {DateTime.Now:HH:mm:ss}";
+        var fr = CultureInfo.GetCultureInfo("fr-FR");
+        var now = DateTime.Now;
+        LastUpdatedText.Text = $"Dernière mise à jour : {now.ToString("D", fr)} à {now:HH:mm:ss}";
       }
       catch (OperationCanceledException)
       {

@@ -34,6 +34,7 @@
                 <TextBlock x:Name="LastUpdatedText"
                            Text="Dernière mise à jour : —"
                            Margin="0,8,0,0"
+                           FontSize="16"
                            Foreground="#666666"/>
 
                 <TextBlock x:Name="StatusText"
