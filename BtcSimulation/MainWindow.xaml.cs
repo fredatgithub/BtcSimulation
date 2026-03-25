@@ -48,15 +48,75 @@ namespace BtcSimulation
 
     private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
+      RestoreWindowPlacement();
       await UpdateBtcPriceAsync();
       _btcTimer.Start();
     }
 
     private void MainWindow_OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+      SaveWindowPlacement();
       _btcTimer.Stop();
       _cts.Cancel();
       _cts.Dispose();
+    }
+
+    private void RestoreWindowPlacement()
+    {
+      var s = Properties.Settings.Default;
+
+      if (!double.IsNaN(s.MainWindowWidth) && s.MainWindowWidth > 0) Width = s.MainWindowWidth;
+      if (!double.IsNaN(s.MainWindowHeight) && s.MainWindowHeight > 0) Height = s.MainWindowHeight;
+
+      var hasLeft = !double.IsNaN(s.MainWindowLeft);
+      var hasTop = !double.IsNaN(s.MainWindowTop);
+
+      if (hasLeft) Left = s.MainWindowLeft;
+      if (hasTop) Top = s.MainWindowTop;
+
+      EnsureOnScreen();
+
+      if (s.MainWindowState == WindowState.Maximized)
+        WindowState = WindowState.Maximized;
+    }
+
+    private void SaveWindowPlacement()
+    {
+      var s = Properties.Settings.Default;
+
+      var bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
+
+      s.MainWindowLeft = bounds.Left;
+      s.MainWindowTop = bounds.Top;
+      s.MainWindowWidth = bounds.Width;
+      s.MainWindowHeight = bounds.Height;
+      s.MainWindowState = WindowState;
+
+      s.Save();
+    }
+
+    private void EnsureOnScreen()
+    {
+      // VirtualScreen = union de tous les moniteurs.
+      var vsLeft = SystemParameters.VirtualScreenLeft;
+      var vsTop = SystemParameters.VirtualScreenTop;
+      var vsWidth = SystemParameters.VirtualScreenWidth;
+      var vsHeight = SystemParameters.VirtualScreenHeight;
+
+      if (vsWidth <= 0 || vsHeight <= 0) return;
+
+      // On force une taille raisonnable si aberrante.
+      if (Width < 200) Width = 800;
+      if (Height < 200) Height = 450;
+
+      if (Left < vsLeft) Left = vsLeft;
+      if (Top < vsTop) Top = vsTop;
+
+      var maxLeft = vsLeft + vsWidth - Width;
+      var maxTop = vsTop + vsHeight - Height;
+
+      if (Left > maxLeft) Left = Math.Max(vsLeft, maxLeft);
+      if (Top > maxTop) Top = Math.Max(vsTop, maxTop);
     }
 
     private async Task UpdateBtcPriceAsync()
