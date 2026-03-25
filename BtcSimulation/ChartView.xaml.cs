@@ -3,18 +3,19 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace BtcSimulation
 {
-  public partial class ChartWindow : Window
+  public partial class ChartView : UserControl
   {
     private readonly List<(DateTime t, decimal price)> _points = new List<(DateTime t, decimal price)>();
 
-    public ChartWindow()
+    public ChartView()
     {
       InitializeComponent();
-      Render();
+      Loaded += (_, __) => Render();
     }
 
     public void AddPoint(DateTime time, decimal priceEur, int maxPoints = 240)
@@ -26,18 +27,13 @@ namespace BtcSimulation
       Render();
     }
 
-    private void ChartWindow_OnSizeChanged(object sender, SizeChangedEventArgs e)
+    private void ChartView_OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
       Render();
     }
 
     private void Render()
     {
-      if (!IsLoaded)
-      {
-        // Evite des mesures 0x0 avant affichage.
-      }
-
       if (_points.Count < 2 || PlotCanvas.ActualWidth <= 1 || PlotCanvas.ActualHeight <= 1)
       {
         EmptyText.Visibility = Visibility.Visible;
@@ -56,14 +52,12 @@ namespace BtcSimulation
       var max = _points.Max(p => p.price);
 
       if (max <= min)
-      {
         max = min + 1m;
-      }
 
       var pts = new PointCollection(_points.Count);
       for (int i = 0; i < _points.Count; i++)
       {
-        var x = (_points.Count == 1) ? 0 : (i * (w / (_points.Count - 1)));
+        var x = i * (w / (_points.Count - 1));
         var yNorm = (double)((_points[i].price - min) / (max - min));
         var y = h - (yNorm * h);
         pts.Add(new Point(x, y));

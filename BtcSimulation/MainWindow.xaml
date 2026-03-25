@@ -9,7 +9,12 @@
         Loaded="MainWindow_OnLoaded"
         Closing="MainWindow_OnClosing">
     <Grid>
-        <Border Margin="16" Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="#DDDDDD" Background="#FAFAFA">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="360"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Margin="16" Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="#DDDDDD" Background="#FAFAFA">
             <StackPanel>
                 <TextBlock Text="Taux BTC" FontSize="20" FontWeight="SemiBold"/>
 
@@ -42,6 +47,10 @@
                            Margin="0,6,0,0"
                            Foreground="#A00000"/>
             </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Margin="0,16,16,16" Padding="0" CornerRadius="10" BorderThickness="1" BorderBrush="#DDDDDD" Background="#FAFAFA">
+            <local:ChartView x:Name="Chart"/>
         </Border>
     </Grid>
 </Window>
