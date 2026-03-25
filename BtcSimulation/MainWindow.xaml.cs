@@ -31,6 +31,7 @@ namespace BtcSimulation
     private readonly DispatcherTimer _btcTimer;
     private CancellationTokenSource _cts = new CancellationTokenSource();
     private bool _isUpdating;
+    private ChartWindow _chartWindow;
 
     public MainWindow()
     {
@@ -49,6 +50,7 @@ namespace BtcSimulation
     private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
       RestoreWindowPlacement();
+      EnsureChartWindow();
       await UpdateBtcPriceAsync();
       _btcTimer.Start();
     }
@@ -59,6 +61,12 @@ namespace BtcSimulation
       _btcTimer.Stop();
       _cts.Cancel();
       _cts.Dispose();
+
+      if (_chartWindow != null)
+      {
+        _chartWindow.Close();
+        _chartWindow = null;
+      }
     }
 
     private void RestoreWindowPlacement()
@@ -137,6 +145,9 @@ namespace BtcSimulation
         var fr = CultureInfo.GetCultureInfo("fr-FR");
         var now = DateTime.Now;
         LastUpdatedText.Text = $"Dernière mise à jour : {now.ToString("D", fr)} à {now:HH:mm:ss}";
+
+        if (_chartWindow != null)
+          _chartWindow.AddPoint(now, prices.Eur);
       }
       catch (OperationCanceledException)
       {
@@ -150,6 +161,48 @@ namespace BtcSimulation
       {
         _isUpdating = false;
       }
+    }
+
+    private void EnsureChartWindow()
+    {
+      if (_chartWindow != null) return;
+
+      _chartWindow = new ChartWindow
+      {
+        Owner = this
+      };
+
+      PositionChartWindow();
+
+      LocationChanged += (_, __) => PositionChartWindow();
+      SizeChanged += (_, __) => PositionChartWindow();
+      StateChanged += (_, __) =>
+      {
+        if (WindowState != WindowState.Minimized)
+          PositionChartWindow();
+      };
+
+      _chartWindow.Show();
+    }
+
+    private void PositionChartWindow()
+    {
+      if (_chartWindow == null) return;
+      if (WindowState == WindowState.Minimized)
+      {
+        _chartWindow.WindowState = WindowState.Minimized;
+        return;
+      }
+
+      if (_chartWindow.WindowState == WindowState.Minimized)
+        _chartWindow.WindowState = WindowState.Normal;
+
+      var gap = 10;
+      var ownerBounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
+
+      _chartWindow.Top = ownerBounds.Top;
+      _chartWindow.Left = ownerBounds.Left + ownerBounds.Width + gap;
+      _chartWindow.Height = ownerBounds.Height;
     }
 
     private static string FormatPrice(decimal amount, string cultureName, string suffix)
