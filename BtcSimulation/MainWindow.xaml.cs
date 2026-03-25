@@ -67,8 +67,15 @@ namespace BtcSimulation
         _cts.Dispose();
         _cts = new CancellationTokenSource();
 
-        var price = await FetchBtcSpotPriceAsync("EUR", _cts.Token);
-        BtcPriceText.Text = $"{price.Amount} {price.Currency}";
+        var eurTask = FetchBtcSpotPriceAsync("EUR", _cts.Token);
+        var usdTask = FetchBtcSpotPriceAsync("USD", _cts.Token);
+        await Task.WhenAll(eurTask, usdTask);
+
+        var eur = await eurTask;
+        var usd = await usdTask;
+
+        BtcPriceText.Text = $"{eur.Amount} {eur.Currency}";
+        BtcPriceUsdText.Text = $"{usd.Amount} {usd.Currency}";
         LastUpdatedText.Text = $"Dernière mise à jour : {DateTime.Now:HH:mm:ss}";
       }
       catch (OperationCanceledException)

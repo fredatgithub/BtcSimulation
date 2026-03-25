@@ -22,6 +22,15 @@
                                Margin="8,0,0,0"/>
                 </StackPanel>
 
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="BTC (USD) :" FontSize="16" />
+                    <TextBlock x:Name="BtcPriceUsdText"
+                               Text="—"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Margin="8,0,0,0"/>
+                </StackPanel>
+
                 <TextBlock x:Name="LastUpdatedText"
                            Text="Dernière mise à jour : —"
                            Margin="0,8,0,0"
