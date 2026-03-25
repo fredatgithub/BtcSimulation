@@ -8,6 +8,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.IO;
 using System.Threading;
+using System.Globalization;
 using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -34,6 +35,9 @@ namespace BtcSimulation
     public MainWindow()
     {
       InitializeComponent();
+
+      if (!Http.DefaultRequestHeaders.UserAgent.Any())
+        Http.DefaultRequestHeaders.UserAgent.ParseAdd("BtcSimulation/1.0 (+WPF .NET 4.8)");
 
       _btcTimer = new DispatcherTimer
       {
@@ -67,15 +71,9 @@ namespace BtcSimulation
         _cts.Dispose();
         _cts = new CancellationTokenSource();
 
-        var eurTask = FetchBtcSpotPriceAsync("EUR", _cts.Token);
-        var usdTask = FetchBtcSpotPriceAsync("USD", _cts.Token);
-        await Task.WhenAll(eurTask, usdTask);
-
-        var eur = await eurTask;
-        var usd = await usdTask;
-
-        BtcPriceText.Text = $"{eur.Amount} {eur.Currency}";
-        BtcPriceUsdText.Text = $"{usd.Amount} {usd.Currency}";
+        var prices = await FetchBtcEurUsdAsync(_cts.Token);
+        BtcPriceText.Text = FormatPrice(prices.Eur, "fr-FR", "€");
+        BtcPriceUsdText.Text = FormatPrice(prices.Usd, "en-US", "$");
         LastUpdatedText.Text = $"Dernière mise à jour : {DateTime.Now:HH:mm:ss}";
       }
       catch (OperationCanceledException)
@@ -92,55 +90,57 @@ namespace BtcSimulation
       }
     }
 
-    private static async Task<CoinbaseSpotPrice> FetchBtcSpotPriceAsync(string currency, CancellationToken ct)
+    private static string FormatPrice(decimal amount, string cultureName, string suffix)
     {
-      // Exemple réponse: {"data":{"base":"BTC","currency":"EUR","amount":"12345.67"}}
-      var url = $"https://api.coinbase.com/v2/prices/spot?currency={Uri.EscapeDataString(currency)}";
+      return string.Format(CultureInfo.GetCultureInfo(cultureName), "{0:N2} {1}", amount, suffix);
+    }
+
+    private static async Task<BtcEurUsd> FetchBtcEurUsdAsync(CancellationToken ct)
+    {
+      // CoinGecko: {"bitcoin":{"eur":12345.67,"usd":13579.24}}
+      var url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur,usd";
       using (var req = new HttpRequestMessage(HttpMethod.Get, url))
       using (var resp = await Http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct))
       {
         resp.EnsureSuccessStatusCode();
         using (var stream = await resp.Content.ReadAsStreamAsync())
         {
-          var serializer = new DataContractJsonSerializer(typeof(CoinbaseSpotResponse));
-          var obj = (CoinbaseSpotResponse)serializer.ReadObject(stream);
+          var serializer = new DataContractJsonSerializer(typeof(CoinGeckoSimplePriceResponse));
+          var obj = (CoinGeckoSimplePriceResponse)serializer.ReadObject(stream);
 
-          if (obj?.Data == null || string.IsNullOrWhiteSpace(obj.Data.Amount) || string.IsNullOrWhiteSpace(obj.Data.Currency))
+          if (obj?.Bitcoin == null)
             throw new InvalidDataException("Réponse API inattendue.");
 
-          return new CoinbaseSpotPrice
+          return new BtcEurUsd
           {
-            Amount = obj.Data.Amount,
-            Currency = obj.Data.Currency
+            Eur = obj.Bitcoin.Eur,
+            Usd = obj.Bitcoin.Usd
           };
         }
       }
     }
 
-    private sealed class CoinbaseSpotPrice
+    private sealed class BtcEurUsd
     {
-      public string Amount { get; set; }
-      public string Currency { get; set; }
+      public decimal Eur { get; set; }
+      public decimal Usd { get; set; }
     }
 
     [DataContract]
-    private sealed class CoinbaseSpotResponse
+    private sealed class CoinGeckoSimplePriceResponse
     {
-      [DataMember(Name = "data")]
-      public CoinbaseSpotData Data { get; set; }
+      [DataMember(Name = "bitcoin")]
+      public CoinGeckoBitcoinPrices Bitcoin { get; set; }
     }
 
     [DataContract]
-    private sealed class CoinbaseSpotData
+    private sealed class CoinGeckoBitcoinPrices
     {
-      [DataMember(Name = "base")]
-      public string Base { get; set; }
+      [DataMember(Name = "eur")]
+      public decimal Eur { get; set; }
 
-      [DataMember(Name = "currency")]
-      public string Currency { get; set; }
-
-      [DataMember(Name = "amount")]
-      public string Amount { get; set; }
+      [DataMember(Name = "usd")]
+      public decimal Usd { get; set; }
     }
   }
 }
